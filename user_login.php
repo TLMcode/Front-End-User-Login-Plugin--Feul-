@@ -660,22 +660,27 @@ function show_login_box()
 
 /*******
 Function To: 
-Show Welcome Message If User Is Logged In - If Not Logged In, Display nothing
+Check If User Is Logged In - Also Starts Session And Connects To Database
 *******/
-function welcome_message_login()
+function user_login_check()
 {
-	global $SITEURL;
+	global $SITEURL; // added declared global
 	$Feul = new Feul;
-	if(isset($_SESSION['LoggedIn']))
-	{
-		$name  = $_SESSION['Username'];
-		//Display Welcome Message
-		$welcome_box = '<div class="user_login_welcome_box_container"><span class=\"user-login-welcome-label\">Welcome: </span>'.$name.'</div>';
+	$Feul->checkLogin();
+	/* 
+	If Logout Link Is Clicked:
+	Log Client Out (End Session) 
+	*/
 
-		//Display Logout Link
-		$logout_link = '<a href="'.$SITEURL.'?logout=yes" class="user-login-logout-link">Logout</a>';
-		echo $Feul->getData('welcomebox').$welcome_box.$logout_link ;
-	}
+	if(isset($_GET['logout']))
+	{
+		if(!empty($_SESSION['LoggedIn']) && !empty($_SESSION['Username']))
+		{
+			$_SESSION = array(); 
+			session_destroy();
+			header( "Location: $SITEURL" );	// added to fix logout issue
+		}
+	}	
 }
 
 /*******
