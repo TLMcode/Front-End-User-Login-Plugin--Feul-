@@ -136,7 +136,7 @@ function user_login_admin()
 					echo '<div class="updated">Emails Successfully Sent</div>';
 				}
 
-				elseif($Feul->Storage == 'DB')
+				else if($Feul->Storage == 'DB')
 				{
 					try 
 					{
@@ -468,6 +468,7 @@ function manageUsers()
 {
 	$Feul = new Feul;
 	$users = $Feul->getAllUsers();
+
 	if($Feul->Storage == 'DB')
 	{
 		$users = (array) $users;
@@ -660,27 +661,25 @@ function show_login_box()
 
 /*******
 Function To: 
-Check If User Is Logged In - Also Starts Session And Connects To Database
+Show Welcome Message If User Is Logged In - If Not Logged In, Display nothing
 *******/
-function user_login_check()
+function welcome_message_login()
 {
-	global $SITEURL; // added declared global
-	$Feul = new Feul;
-	$Feul->checkLogin();
-	/* 
-	If Logout Link Is Clicked:
-	Log Client Out (End Session) 
-	*/
+	global $SITEURL;
 
-	if(isset($_GET['logout']))
+	$Feul = new Feul;
+
+	if(isset($_SESSION['LoggedIn']))
 	{
-		if(!empty($_SESSION['LoggedIn']) && !empty($_SESSION['Username']))
-		{
-			$_SESSION = array(); 
-			session_destroy();
-			header( "Location: $SITEURL" );	// added to fix logout issue
-		}
-	}	
+		$name  = $_SESSION['Username'];
+		//Display Welcome Message
+		$welcome_box = '<div class="user_login_welcome_box_container"><span class=\"user-login-welcome-label\">Welcome: </span>'.$name.'</div>';
+
+		//Display Logout Link
+		$logout_link = '<a href="'.$SITEURL.'?logout=yes" class="user-login-logout-link">Logout</a>';
+
+		echo $Feul->getData('welcomebox').$welcome_box .$logout_link ;
+	}
 }
 
 /*******
@@ -689,18 +688,23 @@ Check If User Is Logged In - Also Starts Session And Connects To Database
 *******/
 function user_login_check()
 {
+	global $SITEURL; // added define global variable CWD
+
 	$Feul = new Feul;
+
 	$Feul->checkLogin();
+
 	/* 
 	If Logout Link Is Clicked:
 	Log Client Out (End Session) 
 	*/
-	if(isset($_GET['logout']))
+	if( isset( $_GET[ 'logout' ] ) ) 
 	{
-		if(!empty($_SESSION['LoggedIn']) && !empty($_SESSION['Username']))
+		if( !empty( $_SESSION[ 'LoggedIn' ] ) && !empty( $_SESSION[ 'Username' ] ) )
 		{
 			$_SESSION = array(); 
 			session_destroy();
+			header( "Location: $SITEURL" );	// added to fix logout issue CWD
 		}
 	}	
 }
@@ -713,28 +717,43 @@ Register Form And Processing Code - Display's And Processes Register Form
 function user_login_register()
 {
 	global $SITEURL;
+
 	$Feul = new Feul;
+
 	$error = '';
+	
 	//If User Is Not Logged In
-	if(!isset($_SESSION['LoggedIn']))
+	if( !isset( $_SESSION[ 'LoggedIn' ] ) )
 	{
-		if(isset($_POST['register-form']))
+		if( isset( $_POST[ 'register-form' ] ) )
 		{
-			//If Register Form Was Submitted
-			if($_POST['username'] != '' && $_POST['password'] != '' && $_POST['email'] != '')
-			{		
-				$addUser = $Feul->processAddUserAdmin($_POST['username'], $_POST['password'], $_POST['email']);
-				if($addUser == true)
+		/*
+			// Add a decrypt here!!			
+			// Working crypt decrypt .. just need to get it working for the client
+			echo $ctst = cryptare( $_POST[ 'username' ], "1234", "" ); // return;
+			echo "<br>" . cryptare( $ctst, "1234", "", 0 ); // return;
+		*/
+
+			if ( validate_username( $_POST[ 'username' ] ) == true
+			&&   validate_password( $_POST[ 'password' ] ) == true
+			&&   validate_email( $_POST[ 'email' ] ) == true )
+			{
+				$addUser = $Feul->processAddUserAdmin( $_POST[ 'username' ], $_POST[ 'password' ], $_POST[ 'email' ] );
+
+				if( $addUser == true )
 				{
-					echo '<div class="success">Your account was successfully created</div>';
-					$Feul->checkLogin(true, $_POST['email'], $_POST['password']);
+
+					echo '<div class="success">Your account was successfully created!</div>';
+
+					$Feul->checkLogin( true, $_POST[ 'email' ], $_POST[ 'password' ] );
+
 					//Send Email
-					$to  = $_POST['email'];
-					$Username = $_POST['username'];
-					$chosen_password = $_POST['password'];
+					$to  = $_POST[ 'email' ];
+					$Username = $_POST[ 'username' ];
+					$chosen_password = $_POST[ 'password' ];
 
 					// subject
-					$subject = 'Your New Account ('.$Username.') Is Setup!';
+					$subject = 'Your New Account (' . $Username . ') Is Setup!';
 
 					// message
 					$message = '
@@ -744,10 +763,10 @@ function user_login_register()
 					</head>
 					<body>
 					<h2><strong>Below is your login information:</strong></h2><br/><br/>
-					<strong>Username: </strong>'.$Username.'<br/>
-					<strong>Password: </strong>'.$chosen_password.'<br/>
+					<strong>Username: </strong>' . $Username . '<br/>
+					<strong>Password: </strong>' . $chosen_password . '<br/>
 					<br/>
-					<a href="'.$SITEURL.'">Click Here To Visit Website</a>
+					<a href="' . $SITEURL . '">Click Here To Visit Website</a>
 					</body>
 					</html>
 					';
@@ -768,20 +787,20 @@ function user_login_register()
 					{
 						$error = '<div class="error">Unable to send welcome email.</div>';
 					}
+
+					// Kill Session
+					session_destroy();
 				}
 				else
 				{
-					$error = '<div class="error">User Already Exists</div>';
+					$error = '<div class="error">Could not create user!</div>';
 				}
 			}
-			else
-			{
-				$error = '<div class="error">Please fill in the required fields</div>';
-			}
 		}
-		echo $Feul->getData('registerbox');
+
+		echo $Feul->getData( 'registerbox' ); // returns the style for the register box from a XML file CWD
+
 		?>
-			<?php echo $error; ?>
 			<h2 class="register_h2">Register</h2>
 			<form method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>" name="registerform" id="registerform">
 				<p>
@@ -800,10 +819,158 @@ function user_login_register()
 					<input type="submit" name="register" id="register" value="Register" />
 					<input type="hidden" name="register-form" value="yes" />
 				</p>
-			</form>
+			</form><br>
 		<?php
 	}	
 }
+
+
+// CWD
+// Checks db users against signup fields
+function check_existing_userfield( $field, $value )
+{
+	$Feul = new Feul;
+
+	$users = $Feul->getAllUsers();
+
+	foreach ( $users as $row ) // Parse db values, compare to one entered into form field
+	{
+		if ( $Feul->Storage == 'XML' && strtolower( $row->$field ) === strtolower( $value ) ) // Check XML field
+		{
+			return true; 
+		}
+		else if ( $Feul->Storage == 'DB' && strtolower( $row[ $field ] ) === strtolower( $value ) ) // Check SQL field
+		{
+			return true; 
+		}
+	}
+}
+
+
+// CWD
+// Makes sure Email field is not empty
+// Makes sure Email field doesn't contain injection and illegal characters
+// Makes sure Email address FORMAT is valid
+function validate_email( $address )
+{
+
+	if ( $address == "" ) // Make sure Email Address field is not empty
+	{
+		echo '<div class="error">Email Address Cannot Be Blank!</div>';
+		return false;
+	}
+	if ( check_existing_userfield( "EmailAddress", $address ) == true ) // Check if Email Address exists
+	{
+		echo '<div class="error">Email Address Already Exists!</div>';
+		return false;
+	}	
+ 	else if ( isInjected( $address ) == true ) // Blocks use of inject characters
+ 	{
+		echo '<div class="error">Email Address Is Not Valid!</div>';
+		return false; 		
+ 	}
+ 	else if ( !preg_match( '/^[\w-\._\+%]+@(?:[\w-]+\.)+[\w]{2,6}$/i', $address ) ) // Email Address format validation
+ 	{
+		echo '<div class="error">Email Address Is Not Valid!</div>'; // maybe use an example hover ??
+		return false;
+ 	}
+	else
+	{
+		return true;
+	}
+}
+
+
+// CWD
+// Makes sure Username field is not empty
+// Makes sure Username field doesn't contain injection and illegal characters
+// Makes sure Username is between min/max length. (default min = 5, max = 10 characters)
+// Makes sure Username contains some letters ( default 4 )
+// ToDo Add Unicode/Multi language character support!
+function validate_username( $username, $min_length = 5, $max_length = 20, $min_letters = 4 )
+{
+
+	if ( $username == "" ) // Make sure Username field is not empty
+	{
+		echo '<div class="error">Username cannot be blank!</div>';
+		return false;
+	}
+	else if ( check_existing_userfield( "Username", $username ) == true ) // Check if username exists
+	{
+		echo '<div class="error">Username Already Exists!</div>';
+		return false;
+	}
+	else if ( strlen( $username ) < $min_length ) // Check Username against minimum length
+	{
+		echo '<div class="error">Username must have at least ' . $min_length . ' character' . ( $min_length > 1 ? 's' : '' ) . '!</div>';
+		return false;
+	}
+	else if ( strlen( $username ) > $max_length ) // Check Username against maximum length
+	{
+		echo '<div class="error">Username can only have ' . $max_length . ' character' . ( $max_length > 1 ? 's' : '' ) . '!</div>';
+		return false;
+	}
+ 	else if ( isInjected( $username ) == true ) // Blocks use of inject characters
+ 	{
+		echo '<div class="error">Username is not valid!</div>';
+		return false; 		
+ 	}
+ 	else if ( preg_match( '/^[^a-z0-9]+$/is', $username ) || preg_match( '/^(?=.*[\s]).*$/s', $username ) )  // Username can only be alphanumeric and must not contain spaces
+ 	{
+		echo '<div class="error">Username can only have letters and numbers!</div>';
+		return false;
+ 	}
+ 	else if ( !preg_match( '/^(?=.*[a-z]{' . $min_letters . '}).*$/is', $username ) ) // Username must contain at least 1 letter
+ 	{
+		echo '<div class="error">Username must have at least ' . $min_letters . ' letter' . ( $min_letters > 1 ? 's' : '' ) . '!</div>';
+		return false;
+ 	}
+	else
+	{
+		return true;
+	}
+}
+
+
+// CWD
+// Makes sure Password field is not empty
+// Makes sure Password field doesn't contain injection and illegal characters
+// Makes sure Password is between min/max length. (default min = 5, max = 10 characters)
+// ToDo Add Unicode/Multi language character support!
+function validate_password( $password, $min_length = 5, $max_length = 20 )
+{
+
+	if( $password == "" ) // Make sure Password field is not empty
+	{
+		echo '<div class="error">Password cannot be blank!</div>';
+		return false;
+	}
+	else if ( strlen( $password ) < $min_length ) // Check Username against minimum length
+	{
+		echo '<div class="error">Password must have at least ' . $min_length . ' character' . ( $min_length > 1 ? 's' : '' ) . '!</div>';
+		return false;
+	}
+	else if ( strlen( $password ) > $max_length ) // Check Username against maximum length
+	{
+		echo '<div class="error">Password can only have ' . $max_length . ' character' . ( $max_length > 1 ? 's' : '' ) . '!</div>';
+		return false;
+	}
+ 	else if ( isInjected( $password ) == true ) // Blocks use of inject characters
+ 	{
+		echo '<div class="error">Password is not valid!</div>';
+		return false; 		
+ 	}
+ 	else if ( !preg_match( '/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[:-\?!-\.]).*$/s', $password ) )  // Password must contain at least 1 letter, number and special character
+ 	{
+		echo '<div class="error">Password must contain at least 1 lowercase, uppercase, number and <a href="#" title="Example: &#33; &#34; &#35; &#36; &#37; &#39; &#41; &#40; &#58; &#59; &#60; &#61; &#62;">special character!</a></div>'; // ToDo add popup hover link display for specical character
+		return false;
+ 	}
+	else
+	{
+		return true;
+	}
+}
+
 
 //Displays members Only Checkbox In edit.php
 function user_login_edit()
@@ -824,6 +991,7 @@ function user_login_edit()
 	<?php
 }
 
+
 //Saves Value Of Checkbox in function - user_login_edit()
 function user_login_save()
 {
@@ -833,3 +1001,109 @@ function user_login_save()
 		$node = $xml->addChild(strtolower('memberonly'))->addCData(stripslashes($_POST['member-only']));	
 	}
 }
+
+
+//Makes sure there is no injection characters
+function isInjected( $str )
+{
+	$injections = array
+	(
+		'(&)',
+		'(\n+)',
+		'(\r+)',
+		'(\t+)',
+		'(%0A+)',
+		'(%0D+)',
+		'(%08+)',
+		'(%09+)'
+	);
+
+	return preg_match( '/' . join( '|', $injections ) . '/is', $str );
+}
+
+// Parameters: 
+// $text = The text that you want to encrypt. 
+// $key = The key you're using to encrypt. 
+// $alg = The algorithm. 
+// $crypt = 1 if you want to crypt, or 0 if you want to decrypt. 
+// source: http://php.net/manual/en/function.mdecrypt-generic.php#88812
+function cryptare( $text, $key, $alg, $crypt = 1 )  
+{ 
+    $encrypted_data = "";
+
+    switch( $alg ) 
+    { 
+        case "3des": 
+            $td = mcrypt_module_open( 'tripledes', '', 'ecb', '' ); 
+            break; 
+        case "cast-128": 
+            $td = mcrypt_module_open( 'cast-128', '', 'ecb', '' ); 
+            break;    
+        case "gost": 
+            $td = mcrypt_module_open( 'gost', '', 'ecb', '' ); 
+            break;    
+        case "rijndael-128": 
+            $td = mcrypt_module_open( 'rijndael-128', '', 'ecb', '' ); 
+            break;        
+        case "twofish": 
+            $td = mcrypt_module_open( 'twofish', '', 'ecb', '' ); 
+            break;    
+        case "arcfour": 
+            $td = mcrypt_module_open( 'arcfour', '', 'ecb', '' ); 
+            break; 
+        case "cast-256": 
+            $td = mcrypt_module_open( 'cast-256', '', 'ecb', '' ); 
+            break;    
+        case "loki97": 
+            $td = mcrypt_module_open( 'loki97', '', 'ecb', '' ); 
+            break;        
+        case "rijndael-192": 
+            $td = mcrypt_module_open( 'rijndael-192', '', 'ecb', '' ); 
+            break; 
+        case "saferplus": 
+            $td = mcrypt_module_open( 'saferplus', '', 'ecb', '' ); 
+            break; 
+        case "wake": 
+            $td = mcrypt_module_open( 'wake', '', 'ecb', '' ); 
+            break; 
+        case "blowfish-compat": 
+            $td = mcrypt_module_open( 'blowfish-compat', '', 'ecb', '' ); 
+            break; 
+        case "des": 
+            $td = mcrypt_module_open( 'des', '', 'ecb', '' ); 
+            break; 
+        case "rijndael-256": 
+            $td = mcrypt_module_open( 'rijndael-256', '', 'ecb', '' ); 
+            break; 
+        case "xtea": 
+            $td = mcrypt_module_open( 'xtea', '', 'ecb', '' ); 
+            break; 
+        case "enigma": 
+            $td = mcrypt_module_open( 'enigma', '', 'ecb', '' ); 
+            break; 
+        case "rc2": 
+            $td = mcrypt_module_open( 'rc2', '', 'ecb', '' ); 
+            break;    
+        default: 
+            $td = mcrypt_module_open( 'blowfish', '', 'ecb', '' ); 
+            break;                                            
+    } 
+    
+    $iv = mcrypt_create_iv( mcrypt_enc_get_iv_size( $td ), MCRYPT_RAND ); 
+    $key = substr( $key, 0, mcrypt_enc_get_key_size( $td ) ); 
+    mcrypt_generic_init( $td, $key, $iv ); 
+    
+    if( $crypt ) 
+    { 
+        $encrypted_data = mcrypt_generic( $td, $text ); 
+    } 
+    else 
+    { 
+        $encrypted_data = mdecrypt_generic( $td, $text ); 
+    } 
+    
+    mcrypt_generic_deinit( $td ); 
+    mcrypt_module_close( $td ); 
+    
+    return $encrypted_data; 
+} 
